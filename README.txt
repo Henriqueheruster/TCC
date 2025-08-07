@@ -1,6 +1,6 @@
 #O que o projeto faz?
 
-Projeto criado para fazer o pré-processamento de bulas de medicmanetos da base da ANVISA em português, utilizando Expressões regualres e a Biblioteca Spacy
+Projeto criado para fazer o pré-processamento de bulas de medicamentos da base da ANVISA em português, utilizando Expressões regualres e a Biblioteca Spacy
 
 #Como ele funciona?
 
@@ -13,6 +13,7 @@ python -m spacy download pt_core_news_lg
 #Rodar o projeto
 
 python main.py
+
 
 
 
