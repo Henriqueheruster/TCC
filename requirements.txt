@@ -1,0 +1,5 @@
+PyPDF2
+transformers
+pandas
+tqdm
+PyPDF2
