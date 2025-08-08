@@ -1,13 +1,13 @@
-import os
-import zipfile
 import json
+import os
 import re
+import zipfile
+
 from PyPDF2 import PdfReader
-from utils import vassoura
-from modelo.medicamento import MedicamentoInf
-from Spacy.segmentacao import processar_todos_arquivos
+
+from modelo.modelos import MedicamentoInf
 from treinamento.treino import classificar_efeitos_bulas
-from treinamento.treino import extrair_arquivos_segmentados
+from utils import vassoura
 
 PASTA_ENTRADA = "entrada"
 PASTA_SAIDA = "saida"
@@ -116,53 +116,25 @@ def extrair_medicamentos():
 
     return medicamentos
 
-def exportar_medicamentos_json(medicamentos):
-    os.makedirs(PASTA_SAIDA, exist_ok=True)
-    for i, med in enumerate(medicamentos, 1):
-        dado = {
-            "INDICACOES": med.indicacao,
-            "CARACTERISTICAS_FARMACOLOGICAS": med.caracteristica_farmacologicas,
-            "CONTRAINDICACOES": med.contraindicacao,
-            "ADVERTENCIAS_E_PRECAUCOES": med.advertencia_precaucoes,
-            "INTERACOES_MEDICAMENTOSAS": med.interacao_medicamentosa,
-            "POSOLOGIA_E_MODO_DE_USAR": med.posologia,
-            "REACOES_ADVERSAS": med.reacoes_adversas,
-            "SUPERDOSE": med.superdose
-        }
 
-        nome_arquivo = f"bulaProcessada_{i}.json"
-        caminho_saida = os.path.join(PASTA_SAIDA, nome_arquivo)
-
-        with open(caminho_saida, "w", encoding="utf-8") as f:
-            json.dump(dado, f, ensure_ascii=False, indent=4)
-
-    print(f"Todos os dados exportados em {len(medicamentos)} arquivos JSON na pasta {PASTA_SAIDA}")   
 
 if __name__ == "__main__":
+    print("comecou")
     os.makedirs(PASTA_SAIDA, exist_ok=True)
     os.makedirs(PASTA_TEMP, exist_ok=True)
+    print("criou diretorios")
     buscar_arquivos()
+    print("buscou arquivos")
     print("Conversão concluída.\nExtraindo informações dos medicamentos...")
     medicamentos_extraidos = extrair_medicamentos()
-    exportar_medicamentos_json(medicamentos_extraidos)
     print("Processo finalizado.")
 
-    resposta = input("Deseja iniciar o processo de segmentação? (s/n): ").strip().lower()
-    if resposta == "s":
-        print("Iniciando processo de segmentação...")
-        try:
-            processar_todos_arquivos()
-            print("Segmentação finalizada.")
-        except Exception as e:
-            print(f"Erro durante a segmentação: {e}")
-    else:
-        print("Segmentação encerrado!.")
+    print(medicamentos_extraidos)
 
     print("Deseja iniciar o processo de classificação dos efeitos colaterais?",end="")
     resposta = input().strip().lower()
     if resposta == "s":
-        extrair_arquivos_segmentados()
-        classificar_efeitos_bulas()
+        classificar_efeitos_bulas(medicamentos_extraidos)
         print("Processo de classificação finalizada")
     else:
         print("Erro na classificação!")
