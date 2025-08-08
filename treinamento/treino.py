@@ -8,6 +8,7 @@ from transformers import pipeline
 
 PASTA_SEGMENTADA = "saida_segmentada"
 PASTA_DATASETS = "datasets"
+ARQUIVO_ZIP = "segmentados.zip"
 os.makedirs(PASTA_DATASETS, exist_ok=True)
 
 def extrair_arquivos_segmentados():
