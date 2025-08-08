@@ -3,6 +3,7 @@ import json
 import zipfile
 import re
 import pandas as pd
+import torch.nn.functional as f
 from tqdm import tqdm
 from transformers import pipeline
 
@@ -66,8 +67,10 @@ def classificar_efeitos_bulas():
 
                 resultados = classifier(batch_filtrado, efeitos, batch_size=len(batch_filtrado))
                 for frase, resultado in zip(batch_filtrado, resultados):
+                    scores_tensor = torch.tensor(resultado["scores"])
+                    probs = f.softmax(scores_tensor, dim=0)
                     melhor_label = resultado["labels"][0]
-                    score = resultado["scores"][0]
+                    score = probs[0].item()
 
                     if score >= 0.5:
                         dataset_anotado.append({
