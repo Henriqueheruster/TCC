@@ -4,8 +4,9 @@ import json
 import re
 from PyPDF2 import PdfReader
 from utils import vassoura
-from modelo.medicamento import MedicamentoInf
-from Spacy.segmentacao import processar_todos_arquivos
+from modelo.modelos import MedicamentoInf
+from Spacy.segmentacao import processar_todos_arquivos_json
+from Spacy.segmentacao import processar_todos_arquivos_txt
 from treinamento.treino import classificar_efeitos_bulas
 from treinamento.treino import extrair_arquivos_segmentados
 

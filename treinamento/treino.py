@@ -10,6 +10,7 @@ from transformers import AutoTokenizer, BertForSequenceClassification
 
 PASTA_SEGMENTADA = "saida_segmentada"
 PASTA_DATASETS = "datasets"
+ARQUIVO_ZIP = "saida_segmentada/segmentados.zip"
 os.makedirs(PASTA_DATASETS, exist_ok=True)
 
 def limpar_frases(frases):

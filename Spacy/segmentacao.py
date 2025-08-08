@@ -67,7 +67,10 @@ def processar_todos_arquivos_txt():
             nome_saida = arquivo  
             caminho_saida = os.path.join(PASTA_SEGMENTACAO, nome_saida)
             with open(caminho_saida, "w", encoding="utf-8") as f:
-                f.write(texto_segmentado)
+                if isinstance(texto_segmentado, list):
+                    f.write("\n".join(texto_segmentado))  
+                else:
+                    f.write(texto_segmentado)
 
             arquivos_segmentados.append(caminho_saida)
 
