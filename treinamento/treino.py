@@ -3,6 +3,7 @@ import json
 import zipfile
 import re
 import pandas as pd
+import torch
 import torch.nn.functional as f
 from tqdm import tqdm
 from transformers import pipeline
