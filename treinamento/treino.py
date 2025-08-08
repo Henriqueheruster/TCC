@@ -3,12 +3,24 @@ import json
 import zipfile
 import re
 import pandas as pd
+import torch
 from tqdm import tqdm
 from transformers import pipeline
+from transformers import AutoTokenizer, BertForSequenceClassification
 
 PASTA_SEGMENTADA = "saida_segmentada"
 PASTA_DATASETS = "datasets"
 os.makedirs(PASTA_DATASETS, exist_ok=True)
+
+def limpar_frases(frases):
+    frases_limpa = []
+    for frase in frases:
+        frase_limpa = re.sub(r"[\n\r]+", " ", frase)
+        frase_limpa = re.sub(r"-\s+", "", frase_limpa)
+        frase_limpa = re.sub(r"\s+", " ", frase_limpa).strip()        
+        frases_limpa.append(frase_limpa)
+    return frases_limpa
+
 
 def extrair_arquivos_segmentados():
     """Extrai os arquivos segmentados do ZIP para a pasta de segmentação."""
@@ -22,36 +34,53 @@ def extrair_arquivos_segmentados():
     else:
         print(f"Arquivo {ARQUIVO_ZIP} não encontrado.")
 
+
 def classificar_efeitos_bulas():
     # Carregar os rótulos
     try:
-        with open("rotulos.json", encoding="utf-8") as f:
-            efeitos = json.load(f)
+        with open("treinamento/rotulos.json", encoding="utf-8") as f:
+            rotulos = json.load(f)
+            id2label = {i: label for i, label in enumerate(rotulos)}
+            label2id = {label: i for i, label in id2label.items()}
     except Exception as e:
         print(f"Erro ao carregar rotulos.json: {e}")
         return
 
     try:
-        classifier = pipeline("zero-shot-classification", model="joeddav/xlm-roberta-large-xnli")
-        arquivos_json = [arq for arq in os.listdir(PASTA_SEGMENTADA) if arq.endswith(".json")]
+        tokenizer = AutoTokenizer.from_pretrained("google-bert/bert-base-uncased")
+        model = BertForSequenceClassification.from_pretrained(
+            "google-bert/bert-base-uncased",
+            num_labels=len(rotulos),
+            problem_type="multi_label_classification"
+        )
+        model.config.id2label = id2label
+        model.config.label2id = label2id
+        model.eval()
     except Exception as e:
-        print(f"Erro ao carregar modelo de classificação: {e}")
+        print(f"Erro ao carregar modelo BERT: {e}")
         return
+    
+    arquivos_process = [arq for arq in os.listdir(PASTA_SEGMENTADA) if arq.endswith((".json", ".txt"))]
 
-    for arquivo in arquivos_json:
+    for arquivo in arquivos_process:
+        caminho = os.path.join(PASTA_SEGMENTADA, arquivo)
         try:
-            caminho = os.path.join(PASTA_SEGMENTADA, arquivo)
-            with open(caminho, encoding="utf-8") as f:
-                bula = json.load(f)
 
-            frases = []
-            for secao, textos in bula.items():
-                for frase in textos:
-                    frase_limpa = re.sub(r"[\n\r]+", " ", frase)
-                    frase_limpa = re.sub(r"-\s+", "", frase_limpa)
-                    frase_limpa = re.sub(r"\s+", " ", frase_limpa).strip()
-                    frases.append(frase_limpa)
+            if arquivo.lower().endswith(".json"):
+                with open(caminho, encoding="utf-8") as f:
+                    bula = json.load(f)
 
+                frases = []
+                for secao, textos in bula.items():
+                    frases.extend(textos)
+                frases = limpar_frases(frases)
+                        
+            elif arquivo.lower().endswith(".txt"):
+                with open(caminho, encoding="utf-8") as f:
+                    texto = f.read()
+                frases = re.split(r'[.!?]', texto)
+                frases = limpar_frases(frases)
+                
             print(f"\nProcessando {arquivo} - Total de frases: {len(frases)}")
 
             batch_size = 16
@@ -59,20 +88,22 @@ def classificar_efeitos_bulas():
 
             for i in tqdm(range(0, len(frases), batch_size), desc=f"Classificando {arquivo}"):
                 batch = frases[i:i+batch_size]
-                batch_filtrado = [f for f in batch if len(f) >= 15]
+                batch_filtrado = batch
                 if not batch_filtrado:
                     continue
 
-                resultados = classifier(batch_filtrado, efeitos, batch_size=len(batch_filtrado))
-                for frase, resultado in zip(batch_filtrado, resultados):
-                    melhor_label = resultado["labels"][0]
-                    score = resultado["scores"][0]
+                inputs = tokenizer(batch_filtrado, padding=True, truncation=True, return_tensors="pt")
+                with torch.no_grad():
+                    logits = model(**inputs).logits
+                    probs = torch.sigmoid(logits)
 
-                    if score >= 0.5:
+                for j, prob in enumerate(probs):
+                    rótulos_ativos = [id2label[idx] for idx, p in enumerate(prob) if p > 0.5]
+                    if rótulos_ativos:
                         dataset_anotado.append({
-                            "texto": frase,
-                            "label": melhor_label,
-                            "score": round(score, 3)
+                            "texto": batch_filtrado[j],
+                            "labels": ", ".join(rótulos_ativos),
+                            "scores": ", ".join([str(round(float(prob[idx]), 3)) for idx in range(len(prob)) if prob[idx] > 0.5])
                         })
 
             if dataset_anotado:
@@ -83,6 +114,7 @@ def classificar_efeitos_bulas():
                 print(f"Dataset criado: {caminho_csv} ({len(df)} exemplos)")
             else:
                 print(f"Nenhum exemplo anotado para {arquivo}")
-        
+
         except Exception as e:
             print(f"Erro ao processar {arquivo}: {e}")
+

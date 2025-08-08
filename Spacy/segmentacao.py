@@ -31,7 +31,9 @@ def processar_arquivo_json(caminho_arquivo):
 
     return dados_segmentados
 
-def processar_todos_arquivos():
+def processar_todos_arquivos_json():
+    arquivos_segmentados = []
+
     for arquivo in os.listdir(PASTA_SAIDA):
         if arquivo.lower().endswith(".json"):
             caminho_entrada = os.path.join(PASTA_SAIDA, arquivo)
@@ -45,5 +47,35 @@ def processar_todos_arquivos():
         for caminho in arquivos_segmentados:
             nome_arquivo = os.path.basename(caminho)
             zipf.write(caminho, arcname=nome_arquivo)
+
+def processar_arquivo_txt(caminho_arquivo):
+    with open(caminho_arquivo, "r", encoding="utf-8") as f:
+        texto = f.read()
+
+    texto_segmentado = segmentar_texto(texto)
+
+    return texto_segmentado
+
+def processar_todos_arquivos_txt():
+    arquivos_segmentados = []
+
+    for arquivo in os.listdir(PASTA_SAIDA):
+        if arquivo.lower().endswith(".txt"):
+            caminho_entrada = os.path.join(PASTA_SAIDA, arquivo)
+            texto_segmentado = processar_arquivo_txt(caminho_entrada)
+
+            nome_saida = arquivo  
+            caminho_saida = os.path.join(PASTA_SEGMENTACAO, nome_saida)
+            with open(caminho_saida, "w", encoding="utf-8") as f:
+                f.write(texto_segmentado)
+
+            arquivos_segmentados.append(caminho_saida)
+
+    # Compactar os arquivos segmentados
+    with zipfile.ZipFile(ARQUIVO_ZIP, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
+        for caminho in arquivos_segmentados:
+            nome_arquivo = os.path.basename(caminho)
+            zipf.write(caminho, arcname=nome_arquivo)
+
         
     print(f"\nTodos os arquivos segmentados foram compactados em: {ARQUIVO_ZIP}")

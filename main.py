@@ -136,27 +136,70 @@ def exportar_medicamentos_json(medicamentos):
         with open(caminho_saida, "w", encoding="utf-8") as f:
             json.dump(dado, f, ensure_ascii=False, indent=4)
 
-    print(f"Todos os dados exportados em {len(medicamentos)} arquivos JSON na pasta {PASTA_SAIDA}")   
+    print(f"Todos os dados exportados em {len(medicamentos)} arquivos JSON na pasta {PASTA_SAIDA}")
+
+def exportar_medicamentos_txt(medicamentos):
+    os.makedirs(PASTA_SAIDA, exist_ok=True)
+    for i, med in enumerate(medicamentos, 1):
+        linhas = [
+            "INDICACOES:\n" + med.indicacao + "\n",
+            "CARACTERISTICAS FARMACOLOGICAS:\n" + med.caracteristica_farmacologicas + "\n",
+            "CONTRAINDICACOES:\n" + med.contraindicacao + "\n",
+            "ADVERTENCIAS E PRECAUCOES:\n" + med.advertencia_precaucoes + "\n",
+            "INTERACOES MEDICAMENTOSAS:\n" + med.interacao_medicamentosa + "\n",
+            "POSOLOGIA E MODO DE USAR:\n" + med.posologia + "\n",
+            "REACOES ADVERSAS:\n" + med.reacoes_adversas + "\n",
+            "SUPERDOSE:\n" + med.superdose + "\n"
+        ]
+
+        nome_arquivo = f"bulaProcessada_{i}.txt"
+        caminho_saida = os.path.join(PASTA_SAIDA, nome_arquivo)
+
+        with open(caminho_saida, "w", encoding="utf-8") as f:
+            f.writelines(linhas)
+
+    print(f"Todos os dados exportados em {len(medicamentos)} arquivos TXT na pasta {PASTA_SAIDA}")
+
 
 if __name__ == "__main__":
     os.makedirs(PASTA_SAIDA, exist_ok=True)
     os.makedirs(PASTA_TEMP, exist_ok=True)
     buscar_arquivos()
-    print("Conversão concluída.\nExtraindo informações dos medicamentos...")
+    print("Conversão concluída.")
+
+    resposta = input("Digite 1 para saida em .TXT\nDigite 2 para saida em .JSON").strip().lower()
+
     medicamentos_extraidos = extrair_medicamentos()
-    exportar_medicamentos_json(medicamentos_extraidos)
-    print("Processo finalizado.")
+
+    if resposta == "1":
+        print("Iniciando processo.")
+        try:
+            exportar_medicamentos_txt(medicamentos_extraidos)
+        except Exception as e:
+            print(f"Erro durante a extração .txt: {e}")
+    else:
+        print("Iniciando processo.")  
+        try:      
+            exportar_medicamentos_json(medicamentos_extraidos)
+        except Exception as e:
+            print(f"Erro durante a extração .json: {e}")        
+    print("Processo encerrado.")
 
     resposta = input("Deseja iniciar o processo de segmentação? (s/n): ").strip().lower()
     if resposta == "s":
-        print("Iniciando processo de segmentação...")
+        print("Iniciando processo de segmentação...")    
         try:
-            processar_todos_arquivos()
-            print("Segmentação finalizada.")
+            for arq in os.listdir(PASTA_SAIDA):
+                if arq.endswith(".json"): 
+                    processar_todos_arquivos_json()
+                    print("Segmentação finalizada.")
+                elif arq.endswith(".txt"):
+                    processar_todos_arquivos_txt()
+                    print("Segmentação finalizada.")
         except Exception as e:
             print(f"Erro durante a segmentação: {e}")
     else:
-        print("Segmentação encerrado!.")
+        print("Processo encerrado!.")
 
     print("Deseja iniciar o processo de classificação dos efeitos colaterais?",end="")
     resposta = input().strip().lower()
@@ -165,6 +208,6 @@ if __name__ == "__main__":
         classificar_efeitos_bulas()
         print("Processo de classificação finalizada")
     else:
-        print("Erro na classificação!")
+        print("Processo encerrado!")
 
     

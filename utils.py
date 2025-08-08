@@ -14,3 +14,5 @@ def vassoura(texto):
     texto = re.sub(pattern_romano, "", texto, flags=re.IGNORECASE)
 
     return texto
+
+
